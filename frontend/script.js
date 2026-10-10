@@ -47,11 +47,16 @@ const esc = (s) =>
 
 
 /* ---------- 3. API ---------- */
+// When served by FastAPI (port 8000) use same-origin paths.
+// When opened with Live Server or another static server, call FastAPI directly.
+const API_BASE =
+  location.port === "8000" ? "" : "http://127.0.0.1:8000";
+
 async function api(path, options = {}) {
   let response;
 
   try {
-    response = await fetch(path, options);
+    response = await fetch(API_BASE + path, options);
   } catch (e) {
     throw new Error(
       "Cannot reach the Batchwise backend. Check that FastAPI is running and the frontend uses the correct server address."

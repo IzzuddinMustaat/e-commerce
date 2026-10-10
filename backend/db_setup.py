@@ -280,7 +280,7 @@ def seed_sample_data(days=120):
 
                 order_no += 1
 
-                # Sales stores hour and weekday, not a full date.
+                # Sales stores the hour, weekday and full date (the API groups sales by week).
                 sales.append({
                     "order_id": f"ORD-{order_no:06d}",
                     "beverage_sku": sku,
@@ -320,7 +320,9 @@ def seed_sample_data(days=120):
                         "ewallet"
                     ]),
                     "hour": hour,
-                    "day_of_week": when.weekday()
+                    "day_of_week": when.weekday(),
+                    "date": when.strftime("%Y-%m-%d"),
+                    "ordered_at": when
                 })
 
                 if random.random() < 0.25:

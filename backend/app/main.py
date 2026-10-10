@@ -3,9 +3,10 @@ import json
 import os
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Literal
-
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles 
 from google import genai
 from google.genai.errors import APIError
 from pydantic import BaseModel, Field
@@ -26,12 +27,22 @@ SYSTEM_INSTRUCTION = (
     "You are a planning assistant for a coffee shop seller. Use only the "
     "supplied MongoDB data and conversation; never invent sales, feedback, or "
     "survey data. Any quantity is a planning suggestion, not a validated "
-    "prediction. The final batch decision belongs to the seller. Keep answers "
-    "short (under 120 words), plain, and practical. Do not offer to post or sell "
-    "anything."
+    "prediction. When the product data includes predicted_cups, that is a "
+    "forecast from the weekly_demand collection for next week; describe it as "
+    "a forecast, not a guarantee. The final batch decision belongs to the "
+    "seller. Keep answers short (under 120 words), plain, and practical. Do "
+    "not offer to post or sell anything."
 )
 
 app = FastAPI(title="Batchwise API")
+
+# Allow the frontend to be opened from another local port (e.g. VS Code Live Server on 5500).
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 _mongo_client: MongoClient | None = None
 
 
@@ -87,6 +98,32 @@ def _date_from_sales_value(value: Any) -> date:
     )
 
 
+def _load_predictions(database: Database) -> dict[str, int]:
+    """Forecast cups per beverage from the weekly_demand collection.
+
+    Documents look like:
+        {"_id": ..., "beverage_type": "Spanish Latte", "predicted_cups": 312}
+
+    The key is the beverage name in lower case so it can be matched against
+    beverages.name. If a beverage has several documents, the newest one
+    (highest _id) wins.
+    """
+    predictions: dict[str, int] = {}
+    cursor = database["weekly_demand"].find(
+        {},
+        {"_id": False, "beverage_type": True, "predicted_cups": True},
+    ).sort("_id", 1)
+    for row in cursor:
+        name = row.get("beverage_type")
+        cups = row.get("predicted_cups")
+        if not isinstance(name, str) or isinstance(cups, bool):
+            continue
+        if not isinstance(cups, (int, float)):
+            continue
+        predictions[name.strip().casefold()] = max(0, round(cups))
+    return predictions
+
+
 def _load_products() -> tuple[str, list[dict[str, Any]]]:
     database = _database()
     beverages = list(
@@ -108,6 +145,8 @@ def _load_products() -> tuple[str, list[dict[str, Any]]]:
     week, _ = _planning_week()
     if not skus:
         return week, []
+
+    predictions = _load_predictions(database)
 
     current_monday = datetime.now(LOCAL_TZ).date()
     current_monday -= timedelta(days=current_monday.weekday())
@@ -197,6 +236,9 @@ def _load_products() -> tuple[str, list[dict[str, Any]]]:
                 "milk_based": beverage.get("milk_based", False),
                 "temperatures": beverage.get("temperatures", []),
                 "sizes": beverage.get("sizes", []),
+                "predicted_cups": predictions.get(
+                    beverage["name"].strip().casefold()
+                ),
                 "sales": [
                     {
                         "d": _week_label(monday, monday + timedelta(days=6)),
@@ -226,11 +268,6 @@ def _read_plans() -> dict[str, int]:
         raise HTTPException(
             status_code=503, detail="Plan storage is unavailable."
         ) from exc
-
-
-@app.get("/")
-def index() -> FileResponse:
-    return FileResponse(ROOT / "frontend" / "index.html")
 
 
 @app.get("/api/health")
@@ -345,3 +382,9 @@ def chat(request: ChatRequest) -> dict[str, str]:
             status_code=502, detail="The AI assistant returned an empty response."
         )
     return {"reply": response.text}
+
+app.mount(
+    "/",
+    StaticFiles(directory=ROOT / "frontend", html=True),
+    name="frontend",
+)

@@ -21,7 +21,7 @@ OUTPUT_COLLECTION_NAME = "weekly_demand"   # output collection
 # of weeks of trading that the documents in "sales" represent.
 # Predictions scale directly with this number
 # (for example, 8 weeks instead of 4 halves every prediction).
-WEEKS_OF_DATA = 4
+WEEKS_OF_DATA = 17   # db_setup.py seeds 120 days of sales (~17 weeks)
 
 # This script lives in backend/AI/, so parent.parent is backend/.
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
