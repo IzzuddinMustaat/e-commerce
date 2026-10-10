@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Batchwise — Next week's batch projection</title>
+<style>
+:root{--bg:#faf7f2;--card:#fff;--ink:#231f1a;--mut:#6b645a;--line:#e6dfd3;--acc:#c2410c;--accbg:#fff1e6;--ok:#15803d;--warn:#b45309;--warnbg:#fef3c7;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17140f;--card:#211d17;--ink:#f3ede3;--mut:#a39a8b;--line:#3a342b;--acc:#fb923c;--accbg:#33241a;--ok:#4ade80;--warn:#fbbf24;--warnbg:#3a2e10}}
+:root[data-theme="dark"]{--bg:#17140f;--card:#211d17;--ink:#f3ede3;--mut:#a39a8b;--line:#3a342b;--acc:#fb923c;--accbg:#33241a;--ok:#4ade80;--warn:#fbbf24;--warnbg:#3a2e10}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:16px 16px 90px}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
+h1{font-size:1.15rem;margin:0}h1 small{color:var(--mut);font-weight:400}
+h2{font-size:1rem;margin:0 0 10px}
+.badge{background:var(--warnbg);color:var(--warn);border-radius:99px;padding:3px 10px;font-size:.78rem;font-weight:600}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+select,input,textarea,button{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+select{min-width:260px;max-width:100%}
+button{cursor:pointer}button.p{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px}
+.hero{border:2px solid var(--acc)}
+.big{font-size:3.2rem;font-weight:800;line-height:1;color:var(--acc)}
+.mut{color:var(--mut);font-size:.9rem}
+.pill{display:inline-block;border-radius:99px;padding:2px 10px;font-size:.8rem;font-weight:600;background:var(--warnbg);color:var(--warn)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.stat{background:var(--bg);border-radius:10px;padding:10px 12px}.stat b{display:block;font-size:1.3rem}
+button.stat{text-align:left;width:100%}button.stat.on{border:2px solid var(--acc)}button.stat b{font-size:1.05rem}
+.tag{font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:var(--mut)}
+.box{background:var(--accbg);border-radius:10px;padding:12px;margin:12px 0}
+.warnbox{background:var(--warnbg);color:var(--warn);border-radius:10px;padding:12px;margin:12px 0;font-weight:600}
+.scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:.92rem}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+details{margin-top:8px}summary{cursor:pointer;color:var(--acc);font-weight:600}
+.bar{height:8px;background:var(--acc);border-radius:4px;margin-top:4px}
+blockquote{margin:6px 0;padding:6px 10px;border-left:3px solid var(--line);color:var(--mut)}
+textarea{width:100%;min-height:110px}
+.sec{margin:22px 0 8px;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
+.chatlog{flex:1;min-height:120px;max-height:50vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin:10px 0}
+.msg{padding:8px 12px;border-radius:12px;max-width:88%;white-space:pre-wrap;word-wrap:break-word}
+.msg.u{align-self:flex-end;background:var(--acc);color:#fff}.msg.a{align-self:flex-start;background:var(--bg);border:1px solid var(--line)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}.chips button{font-size:.85rem;border-radius:99px;padding:4px 10px}
+#chatin{flex:1;min-width:160px}
+.fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:50;display:inline-flex;gap:6px;align-items:center;background:var(--acc);color:#fff;border-color:var(--acc);font-weight:700;border-radius:99px;padding:12px 18px;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.fab[hidden],.chatpanel[hidden]{display:none}
+.chatpanel{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:50;width:min(380px,calc(100vw - 32px));max-height:min(560px,calc(100vh - 32px));display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:0 10px 30px rgba(0,0,0,.28)}
+.chathead{display:flex;align-items:center;gap:8px}.chathead .mut{flex:1;font-size:.78rem}.chathead button{padding:2px 9px}
+</style>
+</head>
+<body>
+<main>
+<header>
+ <h1>Batchwise <small>· next week's batch projection</small></h1>
+ <span class="badge">Demo data</span>
+</header>
+<div class="row" style="margin-bottom:14px">
+ <label for="sel" class="mut">Product &amp; week</label>
+ <select id="sel"></select>
+ <button id="reset">Reset demo</button>
+</div>
+<div id="app"></div>
+<p class="mut">Demo data. The experiment and caption are prewritten sample AI-style outputs; the chat assistant is live AI. Nothing is posted automatically.</p>
+</main>
+<button class="fab" id="chatfab" aria-expanded="false" aria-controls="chat">💬 Ask assistant</button>
+<section class="chatpanel" id="chat" hidden role="dialog" aria-label="Seller assistant"><div class="chathead"><b>Seller assistant</b><span class="mut">live AI · demo data</span><button id="chatclose" aria-label="Hide assistant">✕</button></div>
+<div class="chips" id="chips"></div>
+<div class="chatlog" id="chatlog" aria-live="polite"></div>
+<div class="row"><input id="chatin" placeholder="Ask about your batch, feedback, or promotion…" aria-label="Message to assistant"><button class="p" id="chatsend">Send</button></div>
+<p class="mut" id="chatnote" style="margin:8px 0 0">The assistant can be wrong. The batch decision stays yours.</p></section>
+<script>
+const WK="12–18 October";
+const D=[
+{id:"latte",name:"Iced oat latte",week:WK,unit:"cups",price:6.5,days:5,limit:160,
+ survey:{plan:18,unsure:11,n:40},
+ sales:[{d:"14–20 Sep",u:142},{d:"21–27 Sep",u:128},{d:"28 Sep–4 Oct",u:155}],
+ themes:{sweet:"Sweetness",ice:"Too much ice",price:"Price",stock:"Sold out",pos:"Positive"},
+ comments:[["Really tasty but a bit too sweet for me.","sweet"],["Loved the oat flavour, sweetness was a little much.","sweet"],["Could you do a less sweet option?","sweet"],["Too much ice, cup was half empty after 10 minutes.","ice"],["Great price for campus.","price"],["Sweet, but I'd still buy again.","sweet"],["Ice melts quickly, drink gets watery.","ice"],["Sold out before I got there. Please make more!","stock"],["Perfect before my afternoon class.","pos"],["Syrup is too sweet, ask for half sweet.","sweet"],["A bit pricey compared to the canteen.","price"],["Less ice please.","ice"]],
+ exp:{sweet:"Test a half-sweet version next week: make 20 of the planned cups with half the syrup, label them “Less sweet”, and compare how many of each sell."}},
+{id:"brew",name:"Cold brew",week:WK,unit:"cups",price:7,days:5,limit:120,
+ survey:{plan:14,unsure:9,n:38},
+ sales:[{d:"14–20 Sep",u:104},{d:"21–27 Sep",u:88},{d:"28 Sep–4 Oct",u:96}],
+ themes:{bitter:"Bitterness",stock:"Sold out",size:"Cup size",pos:"Positive"},
+ comments:[["Smooth and strong, great before lectures.","pos"],["A bit bitter without milk.","bitter"],["Sold out on Thursday, please make more.","stock"],["Would love a bigger cup size.","size"],["Great value for the size.","pos"],["Too bitter for me, needs a sweeter option.","bitter"],["Cold brew is my go-to now.","pos"],["Ran out by Friday lunch.","stock"]],
+ exp:{bitter:"Offer a small splash of oat milk or a syrup shot on the side for 15 cups and track how many buyers choose it."}},
+{id:"peach",name:"Peach tea",week:WK,unit:"cups",price:5.5,days:5,limit:100,
+ survey:{plan:10,unsure:12,n:35},
+ sales:[{d:"21–27 Sep",u:52},{d:"28 Sep–4 Oct",u:61}],
+ themes:{sweet:"Sweetness",watery:"Gets watery",pos:"Positive"},
+ comments:[["Refreshing but a little too sweet.","sweet"],["Love the peach flavour.","pos"],["Gets watery once the ice melts.","watery"],["Nice on a hot afternoon.","pos"],["Too sweet for me.","sweet"],["Would buy again.","pos"]],
+ exp:{sweet:"Test a lighter-sweet batch: brew 20 cups with less syrup, label them “Light”, and compare sales against the regular cups."}}
+];
+let sel=0,plans={},caps={};
+const $=id=>document.getElementById(id),rm=n=>"RM "+n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,",");
+const med=a=>{const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+$("sel").innerHTML=D.map((p,i)=>`<option value="${i}">${p.name} — ${p.week}</option>`).join("");
+$("sel").onchange=e=>{sel=+e.target.value;render()};
+$("reset").onclick=()=>{plans={};caps={};sel=0;$("sel").value=0;render()};
+
+function calc(p){
+ const u=p.sales.map(s=>s.u);
+ if(u.length<3)return null;
+ const c=x=>p.limit?Math.min(x,p.limit):x;
+ const m=Math.round(med(u));
+ return{sug:c(m),lo:c(Math.min(...u)),hi:c(Math.max(...u)),raw:m,capped:p.limit&&m>p.limit};
+}
+function themeCounts(p){
+ const c={};p.comments.forEach(([_,t])=>t.split(",").forEach(k=>c[k]=(c[k]||0)+1));
+ return Object.entries(c).filter(([k])=>p.exp[k]||k!=="pos").sort((a,b)=>b[1]-a[1]);
+}
+function caption(p){
+ return `Fresh batch alert! ${p.name} (RM ${p.price.toFixed(2)}) is back the week of ${p.week}. I'm preparing ${plans[p.id]} ${p.unit} for the week, so come early to grab yours!`;
+}
+function render(){
+ const p=D[sel],r=calc(p),plan=plans[p.id],tot=p.sales.reduce((a,s)=>a+s.u,0),gross=tot*p.price;
+ const tc=themeCounts(p),n=p.comments.length,top=tc.find(([k])=>p.exp[k]);
+ let h=`<section class="card"><h2>Next week at a glance <span class="mut">· ${WK}</span></h2><div class="grid">${D.map((q,i)=>{const x=calc(q),pl=plans[q.id];return `<button type="button" class="stat${i===sel?" on":""}" data-i="${i}"><span class="tag">${q.name}</span><b>${pl!=null?pl+" "+q.unit:"Not planned"}</b><span class="mut">${x?"Suggested "+x.sug:"No suggestion yet"}</span></button>`}).join("")}</div></section>`;
+ h+=`<section class="card hero"><div class="tag">Your next batch decision</div>
+ <h2>${p.name} — ${p.week}</h2>`;
+ if(r){
+  h+=`<div class="row" style="gap:20px;align-items:flex-end"><div><div class="mut">Suggested to prepare for the week</div><div class="big">${r.sug}</div><div class="mut">${p.unit} · about ${Math.round(r.sug/p.days)} per selling day (${p.days} days)</div></div>
+  <div><div class="mut">Planning range</div><b style="font-size:1.4rem">${r.lo}–${r.hi}</b> <span class="mut">${p.unit}</span><br><span class="pill">Limited evidence · ${p.sales.length} weeks</span></div></div>
+  <div class="box"><b>Why this number:</b> ${p.sales.length} comparable past weeks sold ${p.sales.map(s=>s.u).join(", ")} ${p.unit}. The middle (median) value is ${r.raw}${r.capped?`, trimmed to your weekly preparation limit of ${p.limit}`:""}. The range is the lowest and highest of those weeks.<br>
+  <span class="mut">${p.survey.plan} of ${p.survey.n} survey respondents say they plan to buy and ${p.survey.unsure} are unsure. These are intentions, not sales, so they are shown as context and not added to the number above.</span></div>
+  <p class="mut" style="margin:0">Demo planning suggestion, not a validated prediction.</p>`;
+ }else{
+  h+=`<div class="warnbox">Not enough sales history to recommend a quantity.</div><p class="mut">Only ${p.sales.length} comparable week${p.sales.length>1?"s":""} on file; this demo needs 3. Survey signals are shown below, but they are not a forecast. You can still enter your own batch.</p>`;
+ }
+ h+=`<hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><div class="row"><label for="qty"><b>Your planned batch for ${p.name}</b></label>
+ <input id="qty" type="number" min="0" ${p.limit?`max="${p.limit}"`:""} style="width:100px" value="${plan??(r?r.sug:"")}">
+ <button class="p" id="ok">Confirm my plan</button></div>
+ <div id="planmsg" style="margin-top:8px">${plan!=null?`<span class="stat" style="display:inline-block"><span class="tag">Seller's choice</span> <b>${plan} ${p.unit}</b></span>${r?` <span class="mut">vs suggested ${r.sug}</span>`:""}`:`<span class="mut">No plan confirmed yet.</span>`}</div></section>`;
+
+ h+=`<div class="sec">Evidence</div><section class="card">
+ <div class="grid"><div class="stat"><span class="tag">Price</span><b>${rm(p.price)}</b></div>
+ <div class="stat"><span class="tag">Selling week</span><b style="font-size:1.05rem">${p.week} (Mon–Fri)</b></div>
+ <div class="stat"><span class="tag">Weekly preparation limit</span><b>${p.limit?p.limit+" "+p.unit:"None supplied"}</b></div></div>
+ <h2 style="margin-top:16px">Survey signals <span class="mut">(intentions, not sales)</span></h2>
+ <div class="grid"><div class="stat"><span class="tag">Plans to buy</span><b>${p.survey.plan}</b>of ${p.survey.n} responses</div>
+ <div class="stat"><span class="tag">Interested but unsure</span><b>${p.survey.unsure}</b>of ${p.survey.n} responses</div>
+ <div class="stat" style="background:var(--accbg)"><span class="tag">Completed sales</span><b>${tot} ${p.unit}</b>${rm(gross)} over ${p.sales.length} week${p.sales.length>1?"s":""}</div></div>
+ <details><summary>Inspect weeks behind these sales</summary><div class="scroll"><table><tr><th>Week</th><th>Units sold</th><th>Gross sales</th></tr>
+ ${p.sales.map(s=>`<tr><td>${s.d}</td><td>${s.u}</td><td>${rm(s.u*p.price)}</td></tr>`).join("")}</table></div></details>
+ <details><summary>How was this calculated?</summary><p class="mut">Suggested weekly quantity = median units sold across three comparable past weeks, capped at the weekly preparation limit if there is one. Range = lowest and highest of those weeks. Survey answers are not added in, to avoid mixing intentions with completed sales and double-counting. With fewer than three weeks of history no suggestion is shown.</p></details></section>`;
+
+ h+=`<div class="sec">Feedback → improvement</div><section class="card"><h2>Recurring themes <span class="mut">(${n} sample comments)</span></h2>
+ ${tc.map(([k,c])=>`<div style="margin-bottom:8px"><b>${c} of ${n}</b> comments: ${p.themes[k]||k}<div class="bar" style="width:${Math.round(c/n*100)}%"></div>
+ <details><summary>View comments</summary>${p.comments.filter(x=>x[1].split(",").includes(k)).map(x=>`<blockquote>“${esc(x[0])}”</blockquote>`).join("")}</details></div>`).join("")}
+ ${n<5?`<p class="mut">Only ${n} comments so far, so treat themes as early signals.</p>`:""}
+ ${top?`<div class="box"><div class="tag">Suggested experiment · sample AI-style output</div>${p.exp[top[0]]}</div>`:""}</section>`;
+
+ h+=`<div class="sec">Promotion draft</div><section class="card"><h2>Caption <span class="mut">(sample AI-style output)</span></h2>`;
+ if(plan==null){h+=`<p class="mut">Confirm your planned batch above and a caption will appear here.</p>`}
+ else{if(caps[p.id]==null)caps[p.id]=caption(p);
+  h+=`<textarea id="cap" aria-label="Promotion caption">${esc(caps[p.id])}</textarea><div class="row" style="margin-top:8px"><button id="cp" class="p">Copy caption</button><button id="rg">Regenerate</button><span class="mut" id="cpm">Not posted anywhere. Edit freely, then copy.</span></div>`}
+ h+=`</section>`;
+ $("app").innerHTML=h;
+
+ document.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>{sel=+b.dataset.i;$("sel").value=sel;render()});
+ $("ok").onclick=()=>{let v=Math.round(+$("qty").value);if(!(v>=0)||$("qty").value==="")return;if(p.limit&&v>p.limit){v=p.limit}plans[p.id]=v;caps[p.id]=null;render()};
+ if($("cap")){$("cap").oninput=e=>caps[p.id]=e.target.value;
+  $("rg").onclick=()=>{caps[p.id]=caption(p);render()};
+  $("cp").onclick=async()=>{try{await navigator.clipboard.writeText($("cap").value);$("cpm").textContent="Copied!"}catch(e){$("cap").select();$("cpm").textContent="Press Ctrl/Cmd+C to copy."}}}
+}
+render();
+
+/* ---- Seller assistant (live AI via the sample capability) ---- */
+(async()=>{
+ const log=$("chatlog"),inp=$("chatin"),btn=$("chatsend"),note=$("chatnote");
+ const Q=["Why this quantity?","How should I use the survey numbers?","What should I test first?","Help me improve my caption"];
+ $("chips").innerHTML=Q.map(q=>`<button type="button">${q}</button>`).join("");
+ const fab=$("chatfab"),panel=$("chat");
+ const openC=()=>{panel.hidden=false;fab.hidden=true;fab.setAttribute("aria-expanded","true");inp.focus()};
+ const closeC=()=>{panel.hidden=true;fab.hidden=false;fab.setAttribute("aria-expanded","false");fab.focus()};
+ fab.onclick=openC;$("chatclose").onclick=closeC;
+ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!panel.hidden)closeC()});
+ let sample=null;
+ try{sample=window.claude?await claude.use("sample"):null}catch(e){}
+ if(!sample){note.textContent="The AI assistant isn't available in this view.";inp.disabled=btn.disabled=true;$("chips").style.display="none";return}
+ const SYS="You are a planning assistant for a campus seller who sells only three products (Iced oat latte, Cold brew, Peach tea) and is planning next week's batch per product. Use ONLY the page data given below; never invent sales, survey numbers or customer quotes. If data is missing, say so. Survey responses are intentions, not completed sales, and must never be added to sales. Any quantity is a demo planning suggestion, not a validated prediction, and the final batch decision belongs to the seller. Keep answers short (under 120 words), plain, and practical. Do not offer to post or sell anything.";
+ function top0(p){const t=themeCounts(p).find(([k])=>p.exp[k]);return t?p.exp[t[0]]:"none"}
+ function ctx(){const p=D[sel],r=calc(p);
+  return `Planning week: ${WK}. Selected product: ${p.name}, price RM${p.price.toFixed(2)}, ${p.days} selling days. Weekly preparation limit: ${p.limit||"none"}. Past comparable weekly sales (units): ${p.sales.map(s=>s.d+": "+s.u).join("; ")}. Demo suggestion: ${r?r.sug+" per week (range "+r.lo+"-"+r.hi+")":"none, not enough sales history"}. Survey (intentions only): ${p.survey.plan} plan to buy, ${p.survey.unsure} unsure, out of ${p.survey.n} responses. Feedback themes: ${themeCounts(p).map(([k,c])=>(p.themes[k]||k)+" "+c+" of "+p.comments.length).join(", ")}. Suggested experiment: ${top0(p)}. Draft caption: ${caps[p.id]||"none yet"}. Seller's confirmed plans per product: ${D.map(q=>q.name+" "+(plans[q.id]??"not yet")).join("; ")}.`}
+ const hist=[];let busy=false;
+ function add(cls,text){const d=document.createElement("div");d.className="msg "+cls;d.textContent=text;log.appendChild(d);log.scrollTop=log.scrollHeight;return d}
+ async function ask(text){
+  text=text.trim();if(!text||busy)return;
+  busy=true;btn.disabled=true;inp.value="";add("u",text);hist.push({role:"user",content:text});
+  const out=add("a","Thinking…");
+  const msgs=[{role:"user",content:SYS+"\n\nCurrent page data:\n"+ctx()+"\n\nThe seller's conversation follows."},{role:"assistant",content:"Understood."},...hist.slice(-10)];
+  try{
+   const r=await sample(msgs,{cache:false,onText:({text})=>{out.textContent=text;log.scrollTop=log.scrollHeight}});
+   out.textContent=r.text;hist.push({role:"assistant",content:r.text});
+  }catch(e){
+   hist.pop();
+   out.textContent=e&&e.code==="not_granted"?"Permission for the assistant wasn't granted, so I can't answer.":e&&e.code==="rate_limited"?"Too many requests. Please wait a moment and try again.":"Sorry, the assistant couldn't answer. Please try again.";
+  }
+  busy=false;btn.disabled=false;inp.focus();
+ }
+ btn.onclick=()=>ask(inp.value);
+ inp.onkeydown=e=>{if(e.key==="Enter")ask(inp.value)};
+ $("chips").onclick=e=>{if(e.target.tagName==="BUTTON")ask(e.target.textContent)};
+ $("reset").addEventListener("click",()=>{hist.length=0;log.innerHTML=""});
+})();
+</script>
+</body>
+</html>
