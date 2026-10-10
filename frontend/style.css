@@ -1,0 +1,430 @@
+
+/* ==========================================================
+   Batchwise styles
+   1. Theme variables
+   2. Base
+   3. Layout
+   4. Components
+   5. Chat assistant
+   ========================================================== */
+
+/* ---------- 1. Theme variables ---------- */
+:root {
+  --bg: #faf7f2;
+  --card: #fff;
+  --ink: #231f1a;
+  --mut: #6b645a;
+  --line: #e6dfd3;
+  --acc: #c2410c;
+  --accbg: #fff1e6;
+  --ok: #15803d;
+  --warn: #b45309;
+  --warnbg: #fef3c7;
+
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Dark mode follows the system unless light mode is forced */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17140f;
+    --card: #211d17;
+    --ink: #f3ede3;
+    --mut: #a39a8b;
+    --line: #3a342b;
+    --acc: #fb923c;
+    --accbg: #33241a;
+    --ok: #4ade80;
+    --warn: #fbbf24;
+    --warnbg: #3a2e10;
+  }
+}
+
+/* Dark mode forced by the page */
+:root[data-theme="dark"] {
+  --bg: #17140f;
+  --card: #211d17;
+  --ink: #f3ede3;
+  --mut: #a39a8b;
+  --line: #3a342b;
+  --acc: #fb923c;
+  --accbg: #33241a;
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --warnbg: #3a2e10;
+}
+
+/* ---------- 2. Base ---------- */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-padding-top: env(safe-area-inset-top, 0px);
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+h1 {
+  font-size: 1.15rem;
+  margin: 0;
+}
+
+h1 small {
+  color: var(--mut);
+  font-weight: 400;
+}
+
+h2 {
+  font-size: 1rem;
+  margin: 0 0 10px;
+}
+
+select,
+input,
+textarea,
+button {
+  font: inherit;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+select {
+  min-width: 260px;
+  max-width: 100%;
+}
+
+textarea {
+  width: 100%;
+  min-height: 110px;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+button.p {
+  background: var(--acc);
+  color: #fff;
+  border-color: var(--acc);
+  font-weight: 600;
+}
+
+details {
+  margin-top: 8px;
+}
+
+summary {
+  cursor: pointer;
+  color: var(--acc);
+  font-weight: 600;
+}
+
+blockquote {
+  margin: 6px 0;
+  padding: 6px 10px;
+  border-left: 3px solid var(--line);
+  color: var(--mut);
+}
+
+/* ---------- 3. Layout ---------- */
+main {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 16px 16px 90px;
+}
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.toolbar {
+  margin-bottom: 14px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.sec {
+  margin: 22px 0 8px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mut);
+}
+
+.scroll {
+  overflow-x: auto;
+}
+
+/* ---------- 4. Components ---------- */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 14px;
+}
+
+.hero {
+  border: 2px solid var(--acc);
+}
+
+.big {
+  font-size: 3.2rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--acc);
+}
+
+.mut {
+  color: var(--mut);
+  font-size: 0.9rem;
+}
+
+.badge {
+  background: var(--warnbg);
+  color: var(--warn);
+  border-radius: 99px;
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.pill {
+  display: inline-block;
+  border-radius: 99px;
+  padding: 2px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--warnbg);
+  color: var(--warn);
+}
+
+.tag {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--mut);
+}
+
+.stat {
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.stat b {
+  display: block;
+  font-size: 1.3rem;
+}
+
+/* Product picker tiles */
+button.stat {
+  text-align: left;
+  width: 100%;
+}
+
+button.stat.on {
+  border: 2px solid var(--acc);
+}
+
+button.stat b {
+  font-size: 1.05rem;
+}
+
+.box {
+  background: var(--accbg);
+  border-radius: 10px;
+  padding: 12px;
+  margin: 12px 0;
+}
+
+.warnbox {
+  background: var(--warnbg);
+  color: var(--warn);
+  border-radius: 10px;
+  padding: 12px;
+  margin: 12px 0;
+  font-weight: 600;
+}
+
+.bar {
+  height: 8px;
+  background: var(--acc);
+  border-radius: 4px;
+  margin-top: 4px;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* ---------- 5. Chat assistant ---------- */
+.fab {
+  position: fixed;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 50;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  background: var(--acc);
+  color: #fff;
+  border-color: var(--acc);
+  font-weight: 700;
+  border-radius: 99px;
+  padding: 12px 18px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.fab[hidden],
+.chatpanel[hidden] {
+  display: none;
+}
+
+.chatpanel {
+  position: fixed;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 50;
+  width: min(380px, calc(100vw - 32px));
+  max-height: min(560px, calc(100vh - 32px));
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+}
+
+.chathead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chathead .mut {
+  flex: 1;
+  font-size: 0.78rem;
+}
+
+.chathead button {
+  padding: 2px 9px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.chips button {
+  font-size: 0.85rem;
+  border-radius: 99px;
+  padding: 4px 10px;
+}
+
+.chatlog {
+  flex: 1;
+  min-height: 120px;
+  max-height: 50vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.msg {
+  padding: 8px 12px;
+  border-radius: 12px;
+  max-width: 88%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.msg.u {
+  align-self: flex-end;
+  background: var(--acc);
+  color: #fff;
+}
+
+.msg.a {
+  align-self: flex-start;
+  background: var(--bg);
+  border: 1px solid var(--line);
+}
+
+#chatin {
+  flex: 1;
+  min-width: 160px;
+}
+
+.chatnote {
+  margin: 8px 0 0;
+}
+
+/* ---------- Small screens ---------- */
+@media (max-width: 480px) {
+  .toolbar select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .toolbar label {
+    width: 100%;
+  }
+
+  .card {
+    padding: 14px;
+  }
+
+  .chatpanel {
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+  }
+}
