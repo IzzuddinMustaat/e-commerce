@@ -3,12 +3,16 @@ import os
 import random
 import sys
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from pymongo import MongoClient, ASCENDING, DESCENDING
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent / ".env")
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 DB_NAME = "coffeeshop"
-LOCAL_TZ = timezone(timedelta(hours=8))
+LOCAL_TZ = timezone(timedelta(hours=8))  # Malaysia time (UTC+8)
 
 client = MongoClient(MONGO_URI)
 db = client[DB_NAME]

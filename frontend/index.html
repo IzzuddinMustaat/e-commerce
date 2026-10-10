@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Batchwise — Next week's batch projection</title>
+<style>
+:root{--bg:#faf7f2;--card:#fff;--ink:#231f1a;--mut:#6b645a;--line:#e6dfd3;--acc:#c2410c;--accbg:#fff1e6;--ok:#15803d;--warn:#b45309;--warnbg:#fef3c7;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17140f;--card:#211d17;--ink:#f3ede3;--mut:#a39a8b;--line:#3a342b;--acc:#fb923c;--accbg:#33241a;--ok:#4ade80;--warn:#fbbf24;--warnbg:#3a2e10}}
+:root[data-theme="dark"]{--bg:#17140f;--card:#211d17;--ink:#f3ede3;--mut:#a39a8b;--line:#3a342b;--acc:#fb923c;--accbg:#33241a;--ok:#4ade80;--warn:#fbbf24;--warnbg:#3a2e10}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:16px 16px 90px}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
+h1{font-size:1.15rem;margin:0}h1 small{color:var(--mut);font-weight:400}
+h2{font-size:1rem;margin:0 0 10px}
+.badge{background:var(--warnbg);color:var(--warn);border-radius:99px;padding:3px 10px;font-size:.78rem;font-weight:600}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+select,input,textarea,button{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+select{min-width:260px;max-width:100%}
+button{cursor:pointer}button.p{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px}
+.hero{border:2px solid var(--acc)}
+.big{font-size:3.2rem;font-weight:800;line-height:1;color:var(--acc)}
+.mut{color:var(--mut);font-size:.9rem}
+.pill{display:inline-block;border-radius:99px;padding:2px 10px;font-size:.8rem;font-weight:600;background:var(--warnbg);color:var(--warn)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.stat{background:var(--bg);border-radius:10px;padding:10px 12px}.stat b{display:block;font-size:1.3rem}
+button.stat{text-align:left;width:100%}button.stat.on{border:2px solid var(--acc)}button.stat b{font-size:1.05rem}
+.tag{font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:var(--mut)}
+.box{background:var(--accbg);border-radius:10px;padding:12px;margin:12px 0}
+.warnbox{background:var(--warnbg);color:var(--warn);border-radius:10px;padding:12px;margin:12px 0;font-weight:600}
+.scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:.92rem}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+details{margin-top:8px}summary{cursor:pointer;color:var(--acc);font-weight:600}
+.bar{height:8px;background:var(--acc);border-radius:4px;margin-top:4px}
+blockquote{margin:6px 0;padding:6px 10px;border-left:3px solid var(--line);color:var(--mut)}
+textarea{width:100%;min-height:110px}
+.sec{margin:22px 0 8px;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
+.chatlog{flex:1;min-height:120px;max-height:50vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin:10px 0}
+.msg{padding:8px 12px;border-radius:12px;max-width:88%;white-space:pre-wrap;word-wrap:break-word}
+.msg.u{align-self:flex-end;background:var(--acc);color:#fff}.msg.a{align-self:flex-start;background:var(--bg);border:1px solid var(--line)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}.chips button{font-size:.85rem;border-radius:99px;padding:4px 10px}
+#chatin{flex:1;min-width:160px}
+.fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:50;display:inline-flex;gap:6px;align-items:center;background:var(--acc);color:#fff;border-color:var(--acc);font-weight:700;border-radius:99px;padding:12px 18px;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.fab[hidden],.chatpanel[hidden]{display:none}
+.chatpanel{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:50;width:min(380px,calc(100vw - 32px));max-height:min(560px,calc(100vh - 32px));display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:0 10px 30px rgba(0,0,0,.28)}
+.chathead{display:flex;align-items:center;gap:8px}.chathead .mut{flex:1;font-size:.78rem}.chathead button{padding:2px 9px}
+</style>
+</head>
+<body>
+<main>
+<header>
+ <h1>Batchwise <small>· next week's batch projection</small></h1>
+ <span class="badge">MongoDB data</span>
+</header>
+<div class="row" style="margin-bottom:14px">
+ <label for="sel" class="mut">Product &amp; week</label>
+ <select id="sel"></select>
+ <button id="reset">Reset saved plans</button>
+</div>
+<div id="app"></div>
+<p class="mut">Beverages, sales, and feedback are read from MongoDB. Plans are saved there too. Captions are drafts only; nothing is posted automatically.</p>
+</main>
+<button class="fab" id="chatfab" aria-expanded="false" aria-controls="chat">💬 Ask assistant</button>
+<section class="chatpanel" id="chat" hidden role="dialog" aria-label="Seller assistant"><div class="chathead"><b>Seller assistant</b><span class="mut">Gemini AI · MongoDB data</span><button id="chatclose" aria-label="Hide assistant">✕</button></div>
+<div class="chips" id="chips"></div>
+<div class="chatlog" id="chatlog" aria-live="polite"></div>
+<div class="row"><input id="chatin" placeholder="Ask about your batch, feedback, or promotion…" aria-label="Message to assistant"><button class="p" id="chatsend">Send</button></div>
+<p class="mut" id="chatnote" style="margin:8px 0 0">The assistant can be wrong. The batch decision stays yours.</p></section>
+<script>
+let WK="",D=[];
+let sel=0,plans={},caps={};
+const $=id=>document.getElementById(id),rm=n=>"RM "+n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,",");
+async function api(path,options={}){
+ let response;
+ try{response=await fetch(path,options)}catch(e){throw new Error("Cannot reach the Batchwise backend.")}
+ let body;
+ try{body=await response.json()}catch(e){throw new Error("The backend returned an invalid response.")}
+ if(!response.ok)throw new Error(body.detail||`Request failed (${response.status}).`);
+ return body;
+}
+const med=a=>{const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+$("sel").onchange=e=>{sel=+e.target.value;render()};
+$("reset").onclick=async()=>{try{await api("/api/plans",{method:"DELETE"});plans={};caps={};sel=0;$("sel").value=0;render()}catch(e){alert(e.message)}};
+
+function calc(p){
+ const u=p.sales.map(s=>s.u);
+ if(u.length<3)return null;
+ const c=x=>p.limit?Math.min(x,p.limit):x;
+ const m=Math.round(med(u));
+ return{sug:c(m),lo:c(Math.min(...u)),hi:c(Math.max(...u)),raw:m,capped:p.limit&&m>p.limit};
+}
+function caption(p){
+ return `Fresh batch alert! ${p.name} (RM ${p.price.toFixed(2)}) is back the week of ${p.week}. I'm preparing ${plans[p.id]} ${p.unit} for the week, so come early to grab yours!`;
+}
+function render(){
+ const p=D[sel],r=calc(p),plan=plans[p.id],tot=p.sales.reduce((a,s)=>a+s.u,0),gross=p.sales.reduce((a,s)=>a+s.revenue,0);
+ const n=p.comments.length;
+ let h=`<section class="card"><h2>Next week at a glance <span class="mut">· ${WK}</span></h2><div class="grid">${D.map((q,i)=>{const x=calc(q),pl=plans[q.id];return `<button type="button" class="stat${i===sel?" on":""}" data-i="${i}"><span class="tag">${esc(q.name)}</span><b>${pl!=null?pl+" "+q.unit:"Not planned"}</b><span class="mut">${x?"Suggested "+x.sug:"No suggestion yet"}</span></button>`}).join("")}</div></section>`;
+ h+=`<section class="card hero"><div class="tag">Your next batch decision</div>
+ <h2>${esc(p.name)} — ${p.week}</h2>`;
+ if(r){
+  h+=`<div class="row" style="gap:20px;align-items:flex-end"><div><div class="mut">Suggested to prepare for the week</div><div class="big">${r.sug}</div><div class="mut">${p.unit} · about ${Math.round(r.sug/p.days)} per selling day (${p.days} days)</div></div>
+  <div><div class="mut">Planning range</div><b style="font-size:1.4rem">${r.lo}–${r.hi}</b> <span class="mut">${p.unit}</span><br><span class="pill">Limited evidence · ${p.sales.length} weeks</span></div></div>
+  <div class="box"><b>Why this number:</b> ${p.sales.length} comparable past weeks sold ${p.sales.map(s=>s.u).join(", ")} ${p.unit}. The middle (median) value is ${r.raw}. The range is the lowest and highest of those weeks.<br>
+  <span class="mut">Based on completed sales recorded in MongoDB. This is a planning reference, not a validated prediction.</span></div>`;
+ }else{
+  h+=`<div class="warnbox">Not enough completed sales history to recommend a quantity.</div><p class="mut">Only ${p.sales.length} completed week${p.sales.length===1?"":"s"} on file; at least 3 are needed. You can still enter your own batch.</p>`;
+ }
+ h+=`<hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><div class="row"><label for="qty"><b>Your planned batch for ${esc(p.name)}</b></label>
+ <input id="qty" type="number" min="0" ${p.limit?`max="${p.limit}"`:""} style="width:100px" value="${plan??(r?r.sug:"")}">
+ <button class="p" id="ok">Confirm my plan</button></div>
+ <div id="planmsg" style="margin-top:8px">${plan!=null?`<span class="stat" style="display:inline-block"><span class="tag">Seller's choice</span> <b>${plan} ${p.unit}</b></span>${r?` <span class="mut">vs suggested ${r.sug}</span>`:""}`:`<span class="mut">No plan confirmed yet.</span>`}</div></section>`;
+
+ h+=`<div class="sec">Evidence</div><section class="card">
+ <div class="grid"><div class="stat"><span class="tag">Price</span><b>${rm(p.price)}</b></div>
+ <div class="stat"><span class="tag">Category</span><b>${esc(p.category)}</b></div>
+ <div class="stat"><span class="tag">Milk-based</span><b>${p.milk_based?"Yes":"No"}</b></div>
+ <div class="stat"><span class="tag">Temperatures</span><b>${p.temperatures.map(esc).join(", ")||"Not listed"}</b></div>
+ <div class="stat"><span class="tag">Sizes</span><b>${p.sizes.map(esc).join(", ")||"Not listed"}</b></div>
+ <div class="stat" style="background:var(--accbg)"><span class="tag">Units sold in these weeks</span><b>${tot} ${p.unit}</b>${rm(gross)} over ${p.sales.length} week${p.sales.length===1?"":"s"}</div></div>
+ <details><summary>Inspect weeks behind these sales</summary><div class="scroll"><table><tr><th>Week</th><th>Units sold</th><th>Gross sales</th></tr>
+ ${p.sales.map(s=>`<tr><td>${s.d}</td><td>${s.u}</td><td>${rm(s.revenue)}</td></tr>`).join("")}</table></div></details>
+ <details><summary>How was this calculated?</summary><p class="mut">Suggested weekly quantity = median units sold across the three latest completed weeks in MongoDB. Range = lowest and highest of those weeks. With fewer than three weeks of history no suggestion is shown.</p></details></section>`;
+
+ h+=`<div class="sec">Feedback</div><section class="card"><h2>Recent customer feedback <span class="mut">(up to 20 comments)</span></h2>
+ ${n?p.comments.map(([comment])=>`<blockquote>“${esc(comment)}”</blockquote>`).join(""):`<p class="mut">No comments are recorded for this beverage.</p>`}</section>`;
+
+ h+=`<div class="sec">Promotion draft</div><section class="card"><h2>Caption <span class="mut">(generated locally; not posted)</span></h2>`;
+ if(plan==null){h+=`<p class="mut">Confirm your planned batch above and a caption will appear here.</p>`}
+ else{if(caps[p.id]==null)caps[p.id]=caption(p);
+  h+=`<textarea id="cap" aria-label="Promotion caption">${esc(caps[p.id])}</textarea><div class="row" style="margin-top:8px"><button id="cp" class="p">Copy caption</button><button id="rg">Regenerate</button><span class="mut" id="cpm">Not posted anywhere. Edit freely, then copy.</span></div>`}
+ h+=`</section>`;
+ $("app").innerHTML=h;
+
+ document.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>{sel=+b.dataset.i;$("sel").value=sel;render()});
+ $("ok").onclick=async()=>{let v=Math.round(+$("qty").value);if(!(v>=0)||$("qty").value==="")return;if(p.limit&&v>p.limit){v=p.limit}try{plans=await api("/api/plans/"+encodeURIComponent(p.id),{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({quantity:v})});caps[p.id]=null;render()}catch(e){$("planmsg").textContent=e.message}};
+ if($("cap")){$("cap").oninput=e=>caps[p.id]=e.target.value;
+  $("rg").onclick=()=>{caps[p.id]=caption(p);render()};
+  $("cp").onclick=async()=>{try{await navigator.clipboard.writeText($("cap").value);$("cpm").textContent="Copied!"}catch(e){$("cap").select();$("cpm").textContent="Press Ctrl/Cmd+C to copy."}}}
+}
+async function start(){
+ try{
+  const data=await api("/api/products"),savedPlans=await api("/api/plans");
+  WK=data.week;D=data.products;plans=savedPlans;
+  if(!D.length){
+   $("app").innerHTML='<section class="card warnbox">No beverages were found in the configured MongoDB database.</section>';
+   $("sel").disabled=true;
+   $("chatnote").textContent="Add beverage records to the beverages collection to use the assistant.";
+   $("chatin").disabled=$("chatsend").disabled=true;
+   $("chatfab").disabled=true;
+   return;
+  }
+  $("sel").innerHTML=D.map((p,i)=>`<option value="${i}">${esc(p.name)} — ${p.week}</option>`).join("");
+  render();
+ }catch(e){
+  $("app").innerHTML=`<section class="card warnbox">${esc(e.message)}</section>`;
+  $("reset").disabled=$("sel").disabled=true;
+  $("chatnote").textContent=e.message;
+  $("chatin").disabled=$("chatsend").disabled=true;
+  $("chatfab").disabled=true;
+  return;
+ }
+
+ /* ---- Seller assistant ---- */
+ const log=$("chatlog"),inp=$("chatin"),btn=$("chatsend"),note=$("chatnote");
+ const Q=["Why this quantity?","What do customers say about this drink?","What should I check before planning?","Help me improve my caption"];
+ $("chips").innerHTML=Q.map(q=>`<button type="button">${q}</button>`).join("");
+ const fab=$("chatfab"),panel=$("chat");
+ const openC=()=>{panel.hidden=false;fab.hidden=true;fab.setAttribute("aria-expanded","true");inp.focus()};
+ const closeC=()=>{panel.hidden=true;fab.hidden=false;fab.setAttribute("aria-expanded","false");fab.focus()};
+ fab.onclick=openC;$("chatclose").onclick=closeC;
+ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!panel.hidden)closeC()});
+ note.textContent="Uses Gemini when configured.";
+ const hist=[];let busy=false;
+ function add(cls,text){const d=document.createElement("div");d.className="msg "+cls;d.textContent=text;log.appendChild(d);log.scrollTop=log.scrollHeight;return d}
+ async function ask(text){
+  text=text.trim();if(!text||busy)return;
+  busy=true;btn.disabled=true;inp.value="";add("u",text);hist.push({role:"user",content:text});
+  const out=add("a","Thinking…");
+  try{
+   const result=await api("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:D[sel].id,message:text,history:hist.slice(0,-1).slice(-10)})});
+   out.textContent=result.reply;hist.push({role:"assistant",content:result.reply});
+  }catch(e){
+   hist.pop();
+   out.textContent=e.message;
+  }
+  busy=false;btn.disabled=false;inp.focus();
+ }
+ btn.onclick=()=>ask(inp.value);
+ inp.onkeydown=e=>{if(e.key==="Enter")ask(inp.value)};
+ $("chips").onclick=e=>{if(e.target.tagName==="BUTTON")ask(e.target.textContent)};
+ $("reset").addEventListener("click",()=>{hist.length=0;log.innerHTML=""});
+}
+start();
+</script>
+</body>
+</html>
