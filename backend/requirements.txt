@@ -2,4 +2,5 @@ fastapi
 uvicorn[standard]
 pymongo
 python-dotenv
+pandas
 google-genai

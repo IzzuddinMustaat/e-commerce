@@ -1,7 +1,7 @@
 from pathlib import Path
 import json
 import os
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException
@@ -11,135 +11,21 @@ from google.genai.errors import APIError
 from pydantic import BaseModel, Field
 from pymongo import MongoClient
 from pymongo.collection import Collection
+from pymongo.database import Database
 from pymongo.errors import PyMongoError
 from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(ROOT / "backend" / ".env")
 
-WEEK = "12–18 October"
-PRODUCTS: list[dict[str, Any]] = [
-    {
-        "id": "latte",
-        "name": "Iced oat latte",
-        "week": WEEK,
-        "unit": "cups",
-        "price": 6.5,
-        "days": 5,
-        "limit": 160,
-        "survey": {"plan": 18, "unsure": 11, "n": 40},
-        "sales": [
-            {"d": "14–20 Sep", "u": 142},
-            {"d": "21–27 Sep", "u": 128},
-            {"d": "28 Sep–4 Oct", "u": 155},
-        ],
-        "themes": {
-            "sweet": "Sweetness",
-            "ice": "Too much ice",
-            "price": "Price",
-            "stock": "Sold out",
-            "pos": "Positive",
-        },
-        "comments": [
-            ["Really tasty but a bit too sweet for me.", "sweet"],
-            ["Loved the oat flavour, sweetness was a little much.", "sweet"],
-            ["Could you do a less sweet option?", "sweet"],
-            ["Too much ice, cup was half empty after 10 minutes.", "ice"],
-            ["Great price for campus.", "price"],
-            ["Sweet, but I'd still buy again.", "sweet"],
-            ["Ice melts quickly, drink gets watery.", "ice"],
-            ["Sold out before I got there. Please make more!", "stock"],
-            ["Perfect before my afternoon class.", "pos"],
-            ["Syrup is too sweet, ask for half sweet.", "sweet"],
-            ["A bit pricey compared to the canteen.", "price"],
-            ["Less ice please.", "ice"],
-        ],
-        "exp": {
-            "sweet": (
-                "Test a half-sweet version next week: make 20 of the planned cups "
-                "with half the syrup, label them “Less sweet”, and compare how "
-                "many of each sell."
-            )
-        },
-    },
-    {
-        "id": "brew",
-        "name": "Cold brew",
-        "week": WEEK,
-        "unit": "cups",
-        "price": 7,
-        "days": 5,
-        "limit": 120,
-        "survey": {"plan": 14, "unsure": 9, "n": 38},
-        "sales": [
-            {"d": "14–20 Sep", "u": 104},
-            {"d": "21–27 Sep", "u": 88},
-            {"d": "28 Sep–4 Oct", "u": 96},
-        ],
-        "themes": {
-            "bitter": "Bitterness",
-            "stock": "Sold out",
-            "size": "Cup size",
-            "pos": "Positive",
-        },
-        "comments": [
-            ["Smooth and strong, great before lectures.", "pos"],
-            ["A bit bitter without milk.", "bitter"],
-            ["Sold out on Thursday, please make more.", "stock"],
-            ["Would love a bigger cup size.", "size"],
-            ["Great value for the size.", "pos"],
-            ["Too bitter for me, needs a sweeter option.", "bitter"],
-            ["Cold brew is my go-to now.", "pos"],
-            ["Ran out by Friday lunch.", "stock"],
-        ],
-        "exp": {
-            "bitter": (
-                "Offer a small splash of oat milk or a syrup shot on the side "
-                "for 15 cups and track how many buyers choose it."
-            )
-        },
-    },
-    {
-        "id": "peach",
-        "name": "Peach tea",
-        "week": WEEK,
-        "unit": "cups",
-        "price": 5.5,
-        "days": 5,
-        "limit": 100,
-        "survey": {"plan": 10, "unsure": 12, "n": 35},
-        "sales": [
-            {"d": "21–27 Sep", "u": 52},
-            {"d": "28 Sep–4 Oct", "u": 61},
-        ],
-        "themes": {
-            "sweet": "Sweetness",
-            "watery": "Gets watery",
-            "pos": "Positive",
-        },
-        "comments": [
-            ["Refreshing but a little too sweet.", "sweet"],
-            ["Love the peach flavour.", "pos"],
-            ["Gets watery once the ice melts.", "watery"],
-            ["Nice on a hot afternoon.", "pos"],
-            ["Too sweet for me.", "sweet"],
-            ["Would buy again.", "pos"],
-        ],
-        "exp": {
-            "sweet": (
-                "Test a lighter-sweet batch: brew 20 cups with less syrup, "
-                "label them “Light”, and compare sales against the regular cups."
-            )
-        },
-    },
-]
-PRODUCTS_BY_ID = {product["id"]: product for product in PRODUCTS}
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+DB_NAME = os.getenv("DB_NAME", "coffeeshop")
+LOCAL_TZ = timezone(timedelta(hours=8))
 
 SYSTEM_INSTRUCTION = (
-    "You are a planning assistant for a campus seller. Use only the supplied "
-    "demo data and conversation; never invent sales, survey numbers, or quotes. "
-    "Survey responses are intentions, not completed sales, and must never be "
-    "added to sales. Any quantity is a demo planning suggestion, not a validated "
+    "You are a planning assistant for a coffee shop seller. Use only the "
+    "supplied MongoDB data and conversation; never invent sales, feedback, or "
+    "survey data. Any quantity is a planning suggestion, not a validated "
     "prediction. The final batch decision belongs to the seller. Keep answers "
     "short (under 120 words), plain, and practical. Do not offer to post or sell "
     "anything."
@@ -147,7 +33,6 @@ SYSTEM_INSTRUCTION = (
 
 app = FastAPI(title="Batchwise API")
 _mongo_client: MongoClient | None = None
-_memory_plans: dict[str, int] = {}
 
 
 class PlanRequest(BaseModel):
@@ -165,22 +50,174 @@ class ChatRequest(BaseModel):
     history: list[ChatMessage] = Field(default_factory=list, max_length=10)
 
 
-def _plans_collection() -> Collection | None:
+def _database() -> Database:
     global _mongo_client
-    mongo_uri = os.getenv("MONGO_URI")
-    if not mongo_uri:
-        return None
     if _mongo_client is None:
-        _mongo_client = MongoClient(mongo_uri, serverSelectionTimeoutMS=3000)
-    database = os.getenv("MONGO_DB", "batchwise")
-    return _mongo_client[database]["seller_plans"]
+        _mongo_client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
+    return _mongo_client[DB_NAME]
+
+
+def _week_label(start: date, end: date) -> str:
+    if start.month == end.month:
+        return f"{start.day}–{end.day} {end.strftime('%B')}"
+    return f"{start.strftime('%d %b')}–{end.strftime('%d %b')}"
+
+
+def _planning_week() -> tuple[str, date]:
+    today = datetime.now(LOCAL_TZ).date()
+    days_until_monday = 7 - today.weekday()
+    monday = today + timedelta(days=days_until_monday)
+    return _week_label(monday, monday + timedelta(days=6)), monday
+
+
+def _date_from_sales_value(value: Any) -> date:
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str):
+        try:
+            return date.fromisoformat(value)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=500, detail="Sales data contains an invalid date."
+            ) from exc
+    raise HTTPException(
+        status_code=500, detail="Sales data is missing a usable date."
+    )
+
+
+def _load_products() -> tuple[str, list[dict[str, Any]]]:
+    database = _database()
+    beverages = list(
+        database["beverages"].find(
+            {},
+            {
+                "_id": False,
+                "sku": True,
+                "name": True,
+                "category": True,
+                "price": True,
+                "milk_based": True,
+                "temperatures": True,
+                "sizes": True,
+            },
+        )
+    )
+    skus = [beverage["sku"] for beverage in beverages]
+    week, _ = _planning_week()
+    if not skus:
+        return week, []
+
+    current_monday = datetime.now(LOCAL_TZ).date()
+    current_monday -= timedelta(days=current_monday.weekday())
+    weekly_sales: dict[str, dict[date, dict[str, float]]] = {
+        sku: {} for sku in skus
+    }
+    sales_pipeline = [
+        {"$match": {"beverage_sku": {"$in": skus}}},
+        {
+            "$project": {
+                "beverage_sku": True,
+                "quantity": True,
+                "unit_price": True,
+                "sale_date": {
+                    "$ifNull": [
+                        "$date",
+                        {
+                            "$dateToString": {
+                                "format": "%Y-%m-%d",
+                                "date": "$ordered_at",
+                                "timezone": "Asia/Kuala_Lumpur",
+                            }
+                        },
+                    ]
+                },
+            }
+        },
+        {
+            "$group": {
+                "_id": {
+                    "sku": "$beverage_sku",
+                    "date": "$sale_date",
+                },
+                "units": {"$sum": "$quantity"},
+                "revenue": {
+                    "$sum": {
+                        "$multiply": [
+                            "$quantity",
+                            {"$ifNull": ["$unit_price", 0]},
+                        ]
+                    }
+                },
+            }
+        },
+    ]
+    for row in database["sales"].aggregate(sales_pipeline):
+        sku = row["_id"]["sku"]
+        sale_date = _date_from_sales_value(row["_id"]["date"])
+        monday = sale_date - timedelta(days=sale_date.weekday())
+        if monday >= current_monday:
+            continue
+        totals = weekly_sales[sku].setdefault(
+            monday, {"units": 0, "revenue": 0}
+        )
+        totals["units"] += row["units"]
+        totals["revenue"] += row["revenue"]
+
+    comments_by_sku: dict[str, list[list[str]]] = {sku: [] for sku in skus}
+    feedback_cursor = database["feedback"].find(
+        {
+            "beverage_sku": {"$in": skus},
+            "comment": {"$type": "string", "$ne": ""},
+        },
+        {"_id": False, "beverage_sku": True, "comment": True},
+    ).sort("created_at", -1)
+    for feedback in feedback_cursor:
+        comments = comments_by_sku[feedback["beverage_sku"]]
+        if len(comments) < 20:
+            comments.append([feedback["comment"], "feedback"])
+        if all(len(items) >= 20 for items in comments_by_sku.values()):
+            break
+
+    products: list[dict[str, Any]] = []
+    for beverage in beverages:
+        sku = beverage["sku"]
+        latest_weeks = sorted(weekly_sales[sku].items())[-3:]
+        products.append(
+            {
+                "id": sku,
+                "name": beverage["name"],
+                "week": week,
+                "unit": "cups",
+                "price": float(beverage["price"]),
+                "days": 7,
+                "limit": None,
+                "category": beverage.get("category", "unknown"),
+                "milk_based": beverage.get("milk_based", False),
+                "temperatures": beverage.get("temperatures", []),
+                "sizes": beverage.get("sizes", []),
+                "sales": [
+                    {
+                        "d": _week_label(monday, monday + timedelta(days=6)),
+                        "u": int(totals["units"]),
+                        "revenue": float(totals["revenue"]),
+                    }
+                    for monday, totals in latest_weeks
+                ],
+                "comments": comments_by_sku[sku],
+            }
+        )
+    return week, products
+
+
+def _plans_collection() -> Collection:
+    return _database()["seller_plans"]
 
 
 def _read_plans() -> dict[str, int]:
     try:
         collection = _plans_collection()
-        if collection is None:
-            return _memory_plans.copy()
         return {
             entry["product_id"]: entry["quantity"]
             for entry in collection.find({}, {"_id": False})
@@ -198,15 +235,24 @@ def index() -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
-    return {
-        "status": "ok",
-        "plan_storage": "mongodb" if os.getenv("MONGO_URI") else "memory",
-    }
+    try:
+        _database().command("ping")
+    except PyMongoError as exc:
+        raise HTTPException(
+            status_code=503, detail="MongoDB is unavailable."
+        ) from exc
+    return {"status": "ok", "database": DB_NAME, "storage": "mongodb"}
 
 
 @app.get("/api/products")
 def get_products() -> dict[str, Any]:
-    return {"week": WEEK, "products": PRODUCTS}
+    try:
+        week, products = _load_products()
+        return {"week": week, "products": products}
+    except PyMongoError as exc:
+        raise HTTPException(
+            status_code=503, detail="Coffee shop data is unavailable."
+        ) from exc
 
 
 @app.get("/api/plans")
@@ -216,30 +262,23 @@ def get_plans() -> dict[str, int]:
 
 @app.put("/api/plans/{product_id}")
 def save_plan(product_id: str, plan: PlanRequest) -> dict[str, int]:
-    product = PRODUCTS_BY_ID.get(product_id)
-    if product is None:
-        raise HTTPException(status_code=404, detail="Product not found.")
-    if product["limit"] and plan.quantity > product["limit"]:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Quantity cannot exceed the limit of {product['limit']}.",
-        )
     try:
+        if not _database()["beverages"].find_one({"sku": product_id}, {"_id": True}):
+            raise HTTPException(status_code=404, detail="Product not found.")
         collection = _plans_collection()
-        if collection is None:
-            _memory_plans[product_id] = plan.quantity
-        else:
-            collection.update_one(
-                {"product_id": product_id},
-                {
-                    "$set": {
-                        "product_id": product_id,
-                        "quantity": plan.quantity,
-                        "updated_at": datetime.now(timezone.utc),
-                    }
-                },
-                upsert=True,
-            )
+        collection.update_one(
+            {"product_id": product_id},
+            {
+                "$set": {
+                    "product_id": product_id,
+                    "quantity": plan.quantity,
+                    "updated_at": datetime.now(timezone.utc),
+                }
+            },
+            upsert=True,
+        )
+    except HTTPException:
+        raise
     except PyMongoError as exc:
         raise HTTPException(
             status_code=503, detail="Plan storage is unavailable."
@@ -250,11 +289,7 @@ def save_plan(product_id: str, plan: PlanRequest) -> dict[str, int]:
 @app.delete("/api/plans")
 def reset_plans() -> dict[str, int]:
     try:
-        collection = _plans_collection()
-        if collection is None:
-            _memory_plans.clear()
-        else:
-            collection.delete_many({})
+        _plans_collection().delete_many({})
     except PyMongoError as exc:
         raise HTTPException(
             status_code=503, detail="Plan storage is unavailable."
@@ -264,7 +299,15 @@ def reset_plans() -> dict[str, int]:
 
 @app.post("/api/chat")
 def chat(request: ChatRequest) -> dict[str, str]:
-    product = PRODUCTS_BY_ID.get(request.product_id)
+    try:
+        _, products = _load_products()
+    except PyMongoError as exc:
+        raise HTTPException(
+            status_code=503, detail="Coffee shop data is unavailable."
+        ) from exc
+    product = next(
+        (item for item in products if item["id"] == request.product_id), None
+    )
     if product is None:
         raise HTTPException(status_code=404, detail="Product not found.")
     api_key = os.getenv("GEMINI_API_KEY")
@@ -274,7 +317,7 @@ def chat(request: ChatRequest) -> dict[str, str]:
         )
 
     context = {
-        "planning_week": WEEK,
+        "planning_week": product["week"],
         "selected_product": product,
         "seller_confirmed_plans": _read_plans(),
     }
