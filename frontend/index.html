@@ -59,43 +59,30 @@ textarea{width:100%;min-height:110px}
  <button id="reset">Reset demo</button>
 </div>
 <div id="app"></div>
-<p class="mut">Demo data. The experiment and caption are prewritten sample AI-style outputs; the chat assistant is live AI. Nothing is posted automatically.</p>
+<p class="mut">Demo data. The experiment and caption are prewritten sample AI-style outputs; the chat assistant uses Gemini when configured. Nothing is posted automatically.</p>
 </main>
 <button class="fab" id="chatfab" aria-expanded="false" aria-controls="chat">💬 Ask assistant</button>
-<section class="chatpanel" id="chat" hidden role="dialog" aria-label="Seller assistant"><div class="chathead"><b>Seller assistant</b><span class="mut">live AI · demo data</span><button id="chatclose" aria-label="Hide assistant">✕</button></div>
+<section class="chatpanel" id="chat" hidden role="dialog" aria-label="Seller assistant"><div class="chathead"><b>Seller assistant</b><span class="mut">Gemini AI · demo data</span><button id="chatclose" aria-label="Hide assistant">✕</button></div>
 <div class="chips" id="chips"></div>
 <div class="chatlog" id="chatlog" aria-live="polite"></div>
 <div class="row"><input id="chatin" placeholder="Ask about your batch, feedback, or promotion…" aria-label="Message to assistant"><button class="p" id="chatsend">Send</button></div>
 <p class="mut" id="chatnote" style="margin:8px 0 0">The assistant can be wrong. The batch decision stays yours.</p></section>
 <script>
-const WK="12–18 October";
-const D=[
-{id:"latte",name:"Iced oat latte",week:WK,unit:"cups",price:6.5,days:5,limit:160,
- survey:{plan:18,unsure:11,n:40},
- sales:[{d:"14–20 Sep",u:142},{d:"21–27 Sep",u:128},{d:"28 Sep–4 Oct",u:155}],
- themes:{sweet:"Sweetness",ice:"Too much ice",price:"Price",stock:"Sold out",pos:"Positive"},
- comments:[["Really tasty but a bit too sweet for me.","sweet"],["Loved the oat flavour, sweetness was a little much.","sweet"],["Could you do a less sweet option?","sweet"],["Too much ice, cup was half empty after 10 minutes.","ice"],["Great price for campus.","price"],["Sweet, but I'd still buy again.","sweet"],["Ice melts quickly, drink gets watery.","ice"],["Sold out before I got there. Please make more!","stock"],["Perfect before my afternoon class.","pos"],["Syrup is too sweet, ask for half sweet.","sweet"],["A bit pricey compared to the canteen.","price"],["Less ice please.","ice"]],
- exp:{sweet:"Test a half-sweet version next week: make 20 of the planned cups with half the syrup, label them “Less sweet”, and compare how many of each sell."}},
-{id:"brew",name:"Cold brew",week:WK,unit:"cups",price:7,days:5,limit:120,
- survey:{plan:14,unsure:9,n:38},
- sales:[{d:"14–20 Sep",u:104},{d:"21–27 Sep",u:88},{d:"28 Sep–4 Oct",u:96}],
- themes:{bitter:"Bitterness",stock:"Sold out",size:"Cup size",pos:"Positive"},
- comments:[["Smooth and strong, great before lectures.","pos"],["A bit bitter without milk.","bitter"],["Sold out on Thursday, please make more.","stock"],["Would love a bigger cup size.","size"],["Great value for the size.","pos"],["Too bitter for me, needs a sweeter option.","bitter"],["Cold brew is my go-to now.","pos"],["Ran out by Friday lunch.","stock"]],
- exp:{bitter:"Offer a small splash of oat milk or a syrup shot on the side for 15 cups and track how many buyers choose it."}},
-{id:"peach",name:"Peach tea",week:WK,unit:"cups",price:5.5,days:5,limit:100,
- survey:{plan:10,unsure:12,n:35},
- sales:[{d:"21–27 Sep",u:52},{d:"28 Sep–4 Oct",u:61}],
- themes:{sweet:"Sweetness",watery:"Gets watery",pos:"Positive"},
- comments:[["Refreshing but a little too sweet.","sweet"],["Love the peach flavour.","pos"],["Gets watery once the ice melts.","watery"],["Nice on a hot afternoon.","pos"],["Too sweet for me.","sweet"],["Would buy again.","pos"]],
- exp:{sweet:"Test a lighter-sweet batch: brew 20 cups with less syrup, label them “Light”, and compare sales against the regular cups."}}
-];
+let WK="",D=[];
 let sel=0,plans={},caps={};
 const $=id=>document.getElementById(id),rm=n=>"RM "+n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,",");
+async function api(path,options={}){
+ let response;
+ try{response=await fetch(path,options)}catch(e){throw new Error("Cannot reach the Batchwise backend.")}
+ let body;
+ try{body=await response.json()}catch(e){throw new Error("The backend returned an invalid response.")}
+ if(!response.ok)throw new Error(body.detail||`Request failed (${response.status}).`);
+ return body;
+}
 const med=a=>{const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
 const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-$("sel").innerHTML=D.map((p,i)=>`<option value="${i}">${p.name} — ${p.week}</option>`).join("");
 $("sel").onchange=e=>{sel=+e.target.value;render()};
-$("reset").onclick=()=>{plans={};caps={};sel=0;$("sel").value=0;render()};
+$("reset").onclick=async()=>{try{await api("/api/plans",{method:"DELETE"});plans={};caps={};sel=0;$("sel").value=0;render()}catch(e){alert(e.message)}};
 
 function calc(p){
  const u=p.sales.map(s=>s.u);
@@ -157,15 +144,27 @@ function render(){
  $("app").innerHTML=h;
 
  document.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>{sel=+b.dataset.i;$("sel").value=sel;render()});
- $("ok").onclick=()=>{let v=Math.round(+$("qty").value);if(!(v>=0)||$("qty").value==="")return;if(p.limit&&v>p.limit){v=p.limit}plans[p.id]=v;caps[p.id]=null;render()};
+ $("ok").onclick=async()=>{let v=Math.round(+$("qty").value);if(!(v>=0)||$("qty").value==="")return;if(p.limit&&v>p.limit){v=p.limit}try{plans=await api("/api/plans/"+encodeURIComponent(p.id),{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({quantity:v})});caps[p.id]=null;render()}catch(e){$("planmsg").textContent=e.message}};
  if($("cap")){$("cap").oninput=e=>caps[p.id]=e.target.value;
   $("rg").onclick=()=>{caps[p.id]=caption(p);render()};
   $("cp").onclick=async()=>{try{await navigator.clipboard.writeText($("cap").value);$("cpm").textContent="Copied!"}catch(e){$("cap").select();$("cpm").textContent="Press Ctrl/Cmd+C to copy."}}}
 }
-render();
+async function start(){
+ try{
+  const data=await api("/api/products"),savedPlans=await api("/api/plans");
+  WK=data.week;D=data.products;plans=savedPlans;
+  $("sel").innerHTML=D.map((p,i)=>`<option value="${i}">${p.name} — ${p.week}</option>`).join("");
+  render();
+ }catch(e){
+  $("app").innerHTML=`<section class="card warnbox">${esc(e.message)}</section>`;
+  $("reset").disabled=$("sel").disabled=true;
+  $("chatnote").textContent=e.message;
+  $("chatin").disabled=$("chatsend").disabled=true;
+  $("chatfab").disabled=true;
+  return;
+ }
 
-/* ---- Seller assistant (live AI via the sample capability) ---- */
-(async()=>{
+ /* ---- Seller assistant ---- */
  const log=$("chatlog"),inp=$("chatin"),btn=$("chatsend"),note=$("chatnote");
  const Q=["Why this quantity?","How should I use the survey numbers?","What should I test first?","Help me improve my caption"];
  $("chips").innerHTML=Q.map(q=>`<button type="button">${q}</button>`).join("");
@@ -174,26 +173,19 @@ render();
  const closeC=()=>{panel.hidden=true;fab.hidden=false;fab.setAttribute("aria-expanded","false");fab.focus()};
  fab.onclick=openC;$("chatclose").onclick=closeC;
  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!panel.hidden)closeC()});
- let sample=null;
- try{sample=window.claude?await claude.use("sample"):null}catch(e){}
- if(!sample){note.textContent="The AI assistant isn't available in this view.";inp.disabled=btn.disabled=true;$("chips").style.display="none";return}
- const SYS="You are a planning assistant for a campus seller who sells only three products (Iced oat latte, Cold brew, Peach tea) and is planning next week's batch per product. Use ONLY the page data given below; never invent sales, survey numbers or customer quotes. If data is missing, say so. Survey responses are intentions, not completed sales, and must never be added to sales. Any quantity is a demo planning suggestion, not a validated prediction, and the final batch decision belongs to the seller. Keep answers short (under 120 words), plain, and practical. Do not offer to post or sell anything.";
- function top0(p){const t=themeCounts(p).find(([k])=>p.exp[k]);return t?p.exp[t[0]]:"none"}
- function ctx(){const p=D[sel],r=calc(p);
-  return `Planning week: ${WK}. Selected product: ${p.name}, price RM${p.price.toFixed(2)}, ${p.days} selling days. Weekly preparation limit: ${p.limit||"none"}. Past comparable weekly sales (units): ${p.sales.map(s=>s.d+": "+s.u).join("; ")}. Demo suggestion: ${r?r.sug+" per week (range "+r.lo+"-"+r.hi+")":"none, not enough sales history"}. Survey (intentions only): ${p.survey.plan} plan to buy, ${p.survey.unsure} unsure, out of ${p.survey.n} responses. Feedback themes: ${themeCounts(p).map(([k,c])=>(p.themes[k]||k)+" "+c+" of "+p.comments.length).join(", ")}. Suggested experiment: ${top0(p)}. Draft caption: ${caps[p.id]||"none yet"}. Seller's confirmed plans per product: ${D.map(q=>q.name+" "+(plans[q.id]??"not yet")).join("; ")}.`}
+ note.textContent="Uses Gemini when configured.";
  const hist=[];let busy=false;
  function add(cls,text){const d=document.createElement("div");d.className="msg "+cls;d.textContent=text;log.appendChild(d);log.scrollTop=log.scrollHeight;return d}
  async function ask(text){
   text=text.trim();if(!text||busy)return;
   busy=true;btn.disabled=true;inp.value="";add("u",text);hist.push({role:"user",content:text});
   const out=add("a","Thinking…");
-  const msgs=[{role:"user",content:SYS+"\n\nCurrent page data:\n"+ctx()+"\n\nThe seller's conversation follows."},{role:"assistant",content:"Understood."},...hist.slice(-10)];
   try{
-   const r=await sample(msgs,{cache:false,onText:({text})=>{out.textContent=text;log.scrollTop=log.scrollHeight}});
-   out.textContent=r.text;hist.push({role:"assistant",content:r.text});
+   const result=await api("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:D[sel].id,message:text,history:hist.slice(0,-1).slice(-10)})});
+   out.textContent=result.reply;hist.push({role:"assistant",content:result.reply});
   }catch(e){
    hist.pop();
-   out.textContent=e&&e.code==="not_granted"?"Permission for the assistant wasn't granted, so I can't answer.":e&&e.code==="rate_limited"?"Too many requests. Please wait a moment and try again.":"Sorry, the assistant couldn't answer. Please try again.";
+   out.textContent=e.message;
   }
   busy=false;btn.disabled=false;inp.focus();
  }
@@ -201,7 +193,8 @@ render();
  inp.onkeydown=e=>{if(e.key==="Enter")ask(inp.value)};
  $("chips").onclick=e=>{if(e.target.tagName==="BUTTON")ask(e.target.textContent)};
  $("reset").addEventListener("click",()=>{hist.length=0;log.innerHTML=""});
-})();
+}
+start();
 </script>
 </body>
 </html>
